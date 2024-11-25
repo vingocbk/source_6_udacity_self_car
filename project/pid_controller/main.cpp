@@ -383,7 +383,7 @@ class WayPointsValue {
     } else {
       // computes the ortonormal base
       // declare direction_value
-      Vector2DValue *direction_value = last_point_value>subtract(central_point_value);
+      Vector2DValue *direction_value = last_point_value->subtract(central_point_value);
       // set i
       i = direction_value->unitary();
       // set j
