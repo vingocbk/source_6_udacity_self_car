@@ -425,7 +425,7 @@ int main (int argc, char* argv[])
                                                       );
             // Compute control to apply
             pid_throttle.UpdateError(error_throttle);
-            throttle = pid_throttle.TotalError(true);
+            throttle = pid_throttle.TotalError();
           } 
           // In all other cases submit the path planned by the planner to the controller.
           else {
