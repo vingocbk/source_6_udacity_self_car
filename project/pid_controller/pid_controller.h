@@ -37,7 +37,7 @@ public:
     double delta_time;
 
     double action_value;
-    double I_Value
+    double I_Value;
     /*
     * Constructor
     */

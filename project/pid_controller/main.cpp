@@ -195,6 +195,196 @@ void set_obst(vector<double> x_points, vector<double> y_points, vector<State>& o
 	obst_flag = true;
 }
 
+///////////////////////////////////////////////////////////////////////////////
+
+double correct_angle(double angle) {
+    while(abs(angle) > M_PI) {
+        if(angle < -M_PI) angle += 2 * M_PI;
+        if(angle > M_PI) angle -= 2 * M_PI;
+    }
+    return angle;
+}
+
+void print_vector(char *name, vector<double> v) {
+    printf("%s: ", name);
+    for (auto i = v.begin(); i != v.end(); ++i) printf("%f ", *i);
+    printf("\n");
+}
+
+#define ALMOST_ZERO 0.000001
+#define FULL_STOP -0.5
+//#define FULL_STOP -1
+
+class Vector2D {
+
+    public:
+    
+    double x, y;
+
+    Vector2D(double x, double y) {
+        this->x = x;
+        this->y = y;
+    }
+    
+    Vector2D *sum(Vector2D *v) {
+        return new Vector2D(this->x + v->x, this->y + v->y);
+    }
+    
+    Vector2D *subtract(Vector2D *v) {
+        return new Vector2D(this->x - v->x, this->y - v->y);
+    }
+    
+    Vector2D *multiply(double k) {
+        return new Vector2D(this->x * k, this->y * k);
+    }
+    
+    double dot_product(Vector2D *v) {
+        return this->x * v->x + this->y * v->y;
+    }
+    
+    double magnitude() {
+        return sqrt(this->x * this->x + this->y * this->y);
+    }
+    
+    double angle() {
+        return atan2(this->y, this->x);
+    }
+    
+    double distance(Vector2D *v) {
+        return v->subtract(this)->magnitude();
+    }
+    
+    Vector2D *unitary() {
+        double m = magnitude();
+        if (abs(m) < ALMOST_ZERO) return new Vector2D(0, 0);
+        return new Vector2D(this->x / m, this->y / m);
+    }
+
+};
+
+Vector2D *polar_to_vector(double magnitude, double angle) {
+    return new Vector2D(magnitude * cos(angle), magnitude * sin(angle));
+    //return new Vector2D(magnitude * sin(angle), magnitude * cos(angle));
+}
+
+double min(double n1, double n2) {
+    return n1 < n2 ? n1 : n2;
+}
+
+struct Recommendation {
+    double steering, speed;
+};
+
+class WayPoints {
+
+  public: 
+  
+  int n_points, all_waypoints_stopped, any_waypoint_stopped;
+  Vector2D *location, *central_point, *last_point, *i, *j, *projection;
+  vector<Vector2D *> points;
+  double avg_speed;
+
+  WayPoints(vector<double> x_points, vector<double> y_points, vector<double> v_points) {
+    n_points = x_points.size();
+    double x_avg = 0, y_avg = 0;
+    avg_speed = 0;
+    all_waypoints_stopped = 1;
+    any_waypoint_stopped = 0;
+    // computes the average point and the average speed
+    for(int i = 0; i < n_points; i++) {
+      points.push_back(new Vector2D(x_points[i], y_points[i]));
+      x_avg += x_points[i];
+      y_avg += y_points[i];
+      avg_speed += v_points[i];
+      if(abs(v_points[i]) < ALMOST_ZERO) {
+        all_waypoints_stopped = 0;
+        any_waypoint_stopped = 1;
+      }
+    }
+    x_avg /= n_points;
+    y_avg /= n_points;
+    avg_speed /= n_points;
+    central_point = new Vector2D(x_avg, y_avg);
+    last_point = points[n_points - 1];
+    v_points = v_points;
+  }
+  
+  ~WayPoints() {
+    delete(location);
+    delete(central_point);
+    delete(last_point);
+  }
+  
+  double compute_steering_compensation() {
+    double max_angle = M_PI * 0.25;
+    double angle_compensation = -projection->y * 0.5; //0.25; //0.75; // * 0.5;
+    if(angle_compensation > max_angle) angle_compensation = max_angle;
+    if(angle_compensation < -max_angle) angle_compensation = -max_angle;
+    return angle_compensation;
+  }
+  
+  double compute_speed_compensation() {
+    double max_speed = 1.5; //1;
+    double offset = 0; //0.5; //-0.5; //-1;
+    double speed_compensation = -(projection->x - offset) * 0.15; //0.2; //0.1;
+    if(speed_compensation > max_speed) speed_compensation = max_speed;
+    if(speed_compensation < -max_speed) speed_compensation = -max_speed;
+    //if(speed_compensation < 0) speed_compensation *= 2;
+    return speed_compensation;
+  }
+  
+  double regulate_initial_speed(double goal_speed, double current_speed) {
+    //return goal_speed;
+    double diff_speed = goal_speed - current_speed;
+    double max_diff = 0.75; //0.75; //0.5; //1; //2;
+    if(diff_speed > max_diff) goal_speed = current_speed + max_diff;
+    if(diff_speed < -max_diff) goal_speed = current_speed - max_diff;
+    return goal_speed;
+  }
+  
+  Recommendation recommended_to_stop(double current_angle, double current_speed) {
+    return Recommendation {
+      correct_angle(current_angle), 
+      FULL_STOP
+      //regulate_initial_speed(FULL_STOP, current_speed)
+    };
+  }
+  
+  // The explanation of this calculation is in the README.md file of the github repository, section "Mathematical explanation of the vectorial fields".
+  Recommendation compute_recommendation(Vector2D *location, double current_angle, double current_speed, int n_spirals) {
+    this->location = location;
+    // if the average speed is zero or there are no spirals, the car should stop.
+    if(abs(avg_speed) < ALMOST_ZERO || n_spirals == 0) {
+      return recommended_to_stop(current_angle, current_speed);
+    } else {
+      // computes the ortonormal base
+      Vector2D *direction = last_point->subtract(central_point);
+      i = direction->unitary();
+      j = new Vector2D(-i->y, i->x);
+      // computes the projection of the car location onto the ortonormal base
+      Vector2D *d = location->subtract(central_point);
+      projection = new Vector2D(d->dot_product(i), d->dot_product(j));
+      double steering = correct_angle(direction->angle());
+      double steering_compensation = correct_angle(compute_steering_compensation());
+      double speed = min(avg_speed, 3);
+      double speed_compensation = compute_speed_compensation();
+      printf("Recommendation: steering=%f+%f, speed=%f+%f\n", steering, steering_compensation, speed, speed_compensation);
+      printf("Current: steering=%f, speed=%f\n", current_angle, current_speed);
+      printf("direction=(%f,%f), projection=(%f,%f)\n\n", direction->x, direction->y, projection->x, projection->y);
+      // if the car is ahead of the first (last) waypoint, the car should stop.
+      if(projection->x > direction->magnitude()) 
+        return recommended_to_stop(current_angle, current_speed);
+      return Recommendation {
+        correct_angle(steering + steering_compensation), 
+        regulate_initial_speed(speed + speed_compensation, current_speed)
+      };
+    }
+  }
+
+};
+
+///////////////////////////////////////////////////////////////////////////////
+
 int main ()
 {
   cout << "starting server" << endl;
