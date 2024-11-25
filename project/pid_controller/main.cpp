@@ -53,6 +53,7 @@
 #include <vector>
 #include <cmath>
 #include <time.h>
+#include <string>
 
 using namespace std;
 using json = nlohmann::json;
@@ -114,7 +115,7 @@ void path_planner(vector<double>& x_points, vector<double>& y_points, vector<dou
 
   if(behavior == STOPPED){
 
-  	int max_points = 20;
+  	size_t max_points = 20;
   	double point_x = x_points[x_points.size()-1];
   	double point_y = y_points[x_points.size()-1];
   	while( x_points.size() < max_points ){
@@ -139,7 +140,7 @@ void path_planner(vector<double>& x_points, vector<double>& y_points, vector<dou
   	return;
   }
 
-  for(int i = 0; i < spirals.size(); i++){
+  for(size_t i = 0; i < spirals.size(); i++){
 
     auto trajectory = motion_planner._velocity_profile_generator.generate_trajectory( spirals[i], desired_speed, ego_state,
                                                                                     lead_car_state, behavior);
@@ -147,7 +148,7 @@ void path_planner(vector<double>& x_points, vector<double>& y_points, vector<dou
     vector<double> spiral_x;
     vector<double> spiral_y;
     vector<double> spiral_v;
-    for(int j = 0; j < trajectory.size(); j++){
+    for(size_t j = 0; j < trajectory.size(); j++){
       double point_x = trajectory[j].path_point.x;
       double point_y = trajectory[j].path_point.y;
       double velocity = trajectory[j].v;
@@ -161,32 +162,38 @@ void path_planner(vector<double>& x_points, vector<double>& y_points, vector<dou
     spirals_v.push_back(spiral_v);
 
   }
-
+  
   best_spirals = motion_planner.get_best_spiral_idx(spirals, obstacles, goal);
   int best_spiral_idx = -1;
-
+  
   if(best_spirals.size() > 0)
   	best_spiral_idx = best_spirals[best_spirals.size()-1];
+  
+  // cout << "Spirals: " << spirals.size() << ", best spirals : " << best_spirals.size() << ", idx: " << best_spiral_idx << endl;
 
-  int index = 0;
-  int max_points = 20;
-  int add_points = spirals_x[best_spiral_idx].size();
-  while( x_points.size() < max_points && index < add_points ){
-    double point_x = spirals_x[best_spiral_idx][index];
-    double point_y = spirals_y[best_spiral_idx][index];
-    double velocity = spirals_v[best_spiral_idx][index];
-    index++;
-    x_points.push_back(point_x);
-    y_points.push_back(point_y);
-    v_points.push_back(velocity);
+  if (best_spiral_idx >= 0) {
+    size_t index = 0;
+    size_t max_points = 20;
+    size_t add_points = spirals_x[best_spiral_idx].size();
+    while( x_points.size() < max_points && index < add_points ){
+      double point_x = spirals_x[best_spiral_idx][index];
+      double point_y = spirals_y[best_spiral_idx][index];
+      double velocity = spirals_v[best_spiral_idx][index];
+      index++;
+      x_points.push_back(point_x);
+      y_points.push_back(point_y);
+      v_points.push_back(velocity);
+    }
   }
+  
+  // std::cout << "Output generated.." << std::endl;
 
 
 }
 
-void set_obst(vector<double> x_points, vector<double> y_points, vector<State>& obstacles, bool& obst_flag){
-
-	for( int i = 0; i < x_points.size(); i++){
+void set_obst(vector<double> x_points, vector<double> y_points, vector<State>& obstacles, bool& obst_flag)
+{
+	for( size_t i = 0; i < x_points.size(); i++){
 		State obstacle;
 		obstacle.location.x = x_points[i];
 		obstacle.location.y = y_points[i];
@@ -195,198 +202,17 @@ void set_obst(vector<double> x_points, vector<double> y_points, vector<State>& o
 	obst_flag = true;
 }
 
-/////////////////////////////////CUSTOM//////////////////////////////////////////////
-
-double correct_angle_value(double angle_value) {
-    while(abs(angle_value) > M_PI) {
-        if(angle_value < -M_PI) 
-          angle_value += 2 * M_PI;
-        if(angle_value > M_PI) 
-          angle_value -= 2 * M_PI;
-    }
-    return angle_value;
-}
-
-#define ALMOST_ZERO_VALUE   0.000001
-#define FULL_STOP_VALUE     -0.5
-//#define FULL_STOP_VALUE   -1
-
-class Vector2D {
-
-    public:
-    
-    double x, y;
-
-    Vector2D(double x, double y) {
-        this->x = x;
-        this->y = y;
-    }
-    
-    Vector2D *sum(Vector2D *v) {
-        return new Vector2D(this->x + v->x, this->y + v->y);
-    }
-    
-    Vector2D *subtract(Vector2D *v) {
-        return new Vector2D(this->x - v->x, this->y - v->y);
-    }
-    
-    Vector2D *multiply(double k) {
-        return new Vector2D(this->x * k, this->y * k);
-    }
-    
-    double dot_product(Vector2D *v) {
-        return this->x * v->x + this->y * v->y;
-    }
-    
-    double magnitude() {
-        return sqrt(this->x * this->x + this->y * this->y);
-    }
-    
-    double angle() {
-        return atan2(this->y, this->x);
-    }
-    
-    double distance(Vector2D *v) {
-        return v->subtract(this)->magnitude();
-    }
-    
-    Vector2D *unitary() {
-        double m = magnitude();
-        if (abs(m) < ALMOST_ZER_VALUEO) return new Vector2D(0, 0);
-        return new Vector2D(this->x / m, this->y / m);
-    }
-
-};
-
-Vector2D *polar_to_vector(double magnitude, double angle) {
-    return new Vector2D(magnitude * cos(angle), magnitude * sin(angle));
-    //return new Vector2D(magnitude * sin(angle), magnitude * cos(angle));
-}
-
-double min(double n1, double n2) {
-    return n1 < n2 ? n1 : n2;
-}
-
-struct Recommendation {
-    double steering, speed;
-};
-
-class WayPointsValue {
-
-  public: 
-  Vector2D *location, *central_point, *last_point, *i, *j, *projection;
-  int n_points, all_waypoint_stopped, any_waypoint_stopped;
-  double avg_speed_value;
-  vector<Vector2D *> points;
-  
-
-  WayPointsValue(vector<double> x_points, vector<double> y_points, vector<double> v_points) {
-    n_points = x_points.size();
-    double x_avg = 0, y_avg = 0;
-    avg_speed_value = 0;
-    all_waypoint_stopped = 1;
-    any_waypoint_stopped = 0;
-    // computes the average point and the average speed
-    for(int i = 0; i < n_points; i++) {
-      points.push_back(new Vector2D(x_points[i], y_points[i]));
-      x_avg += x_points[i];
-      y_avg += y_points[i];
-      avg_speed_value += v_points[i];
-      if(abs(v_points[i]) < ALMOST_ZER_VALUEO) {
-        all_waypoint_stopped = 0;
-        any_waypoint_stopped = 1;
-      }
-    }
-    x_avg /= n_points;
-    y_avg /= n_points;
-    avg_speed_value /= n_points;
-    central_point = new Vector2D(x_avg, y_avg);
-    last_point = points[n_points - 1];
-    v_points = v_points;
-  }
-  
-  ~WayPointsValue() {
-    delete(location);
-    delete(central_point);
-    delete(last_point);
-  }
-  
-  double compute_steering_compensation() {
-    double max_angle = M_PI * 0.25;
-    double angle_compensation = -projection->y * 0.5; //0.25; //0.75; // * 0.5;
-    if(angle_compensation > max_angle) angle_compensation = max_angle;
-    if(angle_compensation < -max_angle) angle_compensation = -max_angle;
-    return angle_compensation;
-  }
-  
-  double compute_speed_compensation() {
-    double max_speed = 1.5; //1;
-    double offset = 0; //0.5; //-0.5; //-1;
-    double speed_compensation = -(projection->x - offset) * 0.15; //0.2; //0.1;
-    if(speed_compensation > max_speed) speed_compensation = max_speed;
-    if(speed_compensation < -max_speed) speed_compensation = -max_speed;
-    //if(speed_compensation < 0) speed_compensation *= 2;
-    return speed_compensation;
-  }
-  
-  double regulate_initial_speed(double goal_speed, double current_speed) {
-    //return goal_speed;
-    double diff_speed = goal_speed - current_speed;
-    double max_diff = 0.75; //0.75; //0.5; //1; //2;
-    if(diff_speed > max_diff) goal_speed = current_speed + max_diff;
-    if(diff_speed < -max_diff) goal_speed = current_speed - max_diff;
-    return goal_speed;
-  }
-  
-  Recommendation recommended_to_stop(double current_angle, double current_speed) {
-    return Recommendation {
-      correct_angle_value(current_angle), 
-      FULL_STOP_VALUE
-      //regulate_initial_speed(FULL_STOP_VALUE, current_speed)
-    };
-  }
-  
-  // The explanation of this calculation is in the README.md file of the github repository, section "Mathematical explanation of the vectorial fields".
-  Recommendation compute_recommendation_value(Vector2D *location, double current_angle, double current_speed, int n_spirals) {
-    this->location = location;
-    // if the average speed is zero or there are no spirals, the car should stop.
-    if(abs(avg_speed_value) < ALMOST_ZERO _VALUE|| n_spirals == 0) {
-      return recommended_to_stop(current_angle, current_speed);
-    } else {
-      // computes the ortonormal base
-      Vector2D *direction = last_point->subtract(central_point);
-      i = direction->unitary();
-      j = new Vector2D(-i->y, i->x);
-      // computes the projection of the car location onto the ortonormal base
-      Vector2D *d = location->subtract(central_point);
-      projection = new Vector2D(d->dot_product(i), d->dot_product(j));
-      double steering = correct_angle_value(direction->angle());
-      double steering_compensation = correct_angle_value(compute_steering_compensation());
-      double speed = min(avg_speed_value, 3);
-      double speed_compensation = compute_speed_compensation();
-      printf("Recommendation: steering=%f+%f, speed=%f+%f\n", steering, steering_compensation, speed, speed_compensation);
-      printf("Current: steering=%f, speed=%f\n", current_angle, current_speed);
-      printf("direction=(%f,%f), projection=(%f,%f)\n\n", direction->x, direction->y, projection->x, projection->y);
-      // if the car is ahead of the first (last) waypoint, the car should stop.
-      if(projection->x > direction->magnitude()) 
-        return recommended_to_stop(current_angle, current_speed);
-      return Recommendation {
-        correct_angle_value(steering + steering_compensation), 
-        regulate_initial_speed(speed + speed_compensation, current_speed)
-      };
-    }
-  }
-
-};
-
-/////////////////////////////////CUSTOM//////////////////////////////////////////////
-
-int main ()
+int main (int argc, char* argv[])
 {
-  cout << "starting server" << endl;
+  if (argc != 1 && argc != 9) {
+    std::cout << "incorrect number of arguments passed - either 0 or 8 are accepted" << std::endl;
+    return 1;
+  }
+  std::cout << "arguments: " << argv[1] << ", " << argv[2] << ", " << argv[3] << ", " << argv[4] << ", " << argv[5] << ", " << argv[6] << ", " <<  argv[7] << " " << argv[8] << std::endl;
+  std::cout << "starting server" << std::endl;
   uWS::Hub h;
 
-  double new_delta_time;
+  double last_sim_time = -1.0; // NOTE: the simulation time of the last message received
   int i = 0;
 
   fstream file_steer;
@@ -396,28 +222,49 @@ int main ()
   file_throttle.open("throttle_pid_data.txt", std::ofstream::out | std::ofstream::trunc);
   file_throttle.close();
 
-  time_t prev_timer;
-  time_t timer;
-  time(&prev_timer);
-
   // initialize pid steer
-  /**
-  * TODO (Step 1): create pid (pid_steer) for steer command and initialize values
-  **/
-
+  PID pid_steer = PID();
+  double steer_kp = 30.0;
+  double steer_ki = 0.0;
+  double steer_kd = 0.0;
+  if (argc >= 7) {
+    steer_kp = std::stod(argv[1]);
+    steer_ki = std::stod(argv[2]);
+  	steer_kd = std::stod(argv[3]);
+  }
+  
+  // NOTE: The task description required to set 1.2 as the steering limit, but according to the Carla 
+  // documentation the valid range is [-1.0, 1.0]
+  pid_steer.Init(steer_kp, steer_ki, steer_kd, /*output_lim_max*/ 1.0, /*output_lim_min*/ -1.0);
 
   // initialize pid throttle
-  /**
-  * TODO (Step 1): create pid (pid_throttle) for throttle command and initialize values
-  **/
-
-  PID pid_steer = PID();
-  pid_steer.Init(0.3, 0.01, 0.4, 1.2, -1.2); //25 minutes!
   PID pid_throttle = PID();
-  pid_throttle.Init(0.35, 0.01, 0.2, 1, -1); //25 minutes!
+  double throttle_kp = 0.02;
+  double throttle_ki = 0.0;
+  double throttle_kd = 0.0;
+  if (argc >= 7) {
+    throttle_kp = std::stod(argv[4]);
+    throttle_ki = std::stod(argv[5]);
+  	throttle_kd = std::stod(argv[6]);
+  }
+  pid_throttle.Init(throttle_kp, throttle_ki, throttle_kd, /*output_lim_max*/ 1, /*output_lim_min*/ -1);
+  
+  double cum_abs_steer_error = 0.0;
+  double cum_abs_throttle_error = 0.0;
+  double previous_x_position = 0.0;
+  double previous_y_position = 0.0;
+  double total_distance = 0.0;
+  bool is_first = true;
+  
+  std::string throttle_op_mode = argv[7];
+  std::string steer_op_mode = argv[8];
 
-  h.onMessage([&pid_steer, &pid_throttle, &new_delta_time, &timer, &prev_timer, &i, &prev_timer](uWS::WebSocket<uWS::SERVER> ws, char *data, size_t length, uWS::OpCode opCode)
+  h.onMessage([&pid_steer, &pid_throttle, &i, 
+               &cum_abs_steer_error, &cum_abs_throttle_error, &previous_x_position, &previous_y_position,
+               &total_distance, &is_first, &argv, &throttle_op_mode, &steer_op_mode, &last_sim_time](uWS::WebSocket<uWS::SERVER> ws, char *data, size_t /*length*/, uWS::OpCode /*opCode*/)
   {
+    // std::cout << "Message received in client" << std::endl;
+    
         auto s = hasData(data);
 
         if (s != "") {
@@ -430,10 +277,12 @@ int main ()
           fstream file_throttle;
           file_throttle.open("throttle_pid_data.txt");
 
-          vector<double> x_points = data["traj_x"];
-          vector<double> y_points = data["traj_y"];
-          vector<double> v_points = data["traj_v"];
-          double yaw = data["yaw"];
+          vector<double> x_points_received = data["traj_x"];
+          vector<double> y_points_received = data["traj_y"];
+          vector<double> v_points_received = data["traj_v"];
+          double yaw = data["yaw"]; // NOTE: This is NOT the same yaw that Carla calculates, which is VERY confusing. 
+          							// I have additionally sent the yaw calculated by Carla, because that works well.
+          double carla_yaw = data["carla_yaw"];
           double velocity = data["velocity"];
           double sim_time = data["time"];
           double waypoint_x = data["waypoint_x"];
@@ -444,7 +293,28 @@ int main ()
 
           double x_position = data["location_x"];
           double y_position = data["location_y"];
-          double z_position = data["location_z"];
+          // double z_position = data["location_z"];
+          
+          // NOTE: originally the simulator sent all previously calculated positions back, and the path planner only appended
+          // new points at the end of that vector. This however meant that there was much less feedback, for example if the vehicle
+          // behaved different than what the planner originally expected then it took a long time to correct that. I wanted better
+          // control, so in every iteration I only pass the current state to the planner and force it to start from scratch.
+          vector<double> x_points {x_position};
+          vector<double> y_points {y_position};
+          vector<double> v_points {velocity};
+
+          // FIXME
+//           vector<double> x_points {x_points_received};
+//           vector<double> y_points {y_points_received};
+//           vector<double> v_points {v_points_received};
+          
+          if (is_first) {
+            is_first = false;
+          } else {
+            total_distance += std::sqrt(std::pow(x_position - previous_x_position, 2) + std::pow(y_position - previous_y_position, 2));
+          }
+          previous_x_position = x_position;
+          previous_y_position = y_position;
 
           if(!have_obst){
           	vector<double> x_obst = data["obst_x"];
@@ -461,53 +331,64 @@ int main ()
           vector< vector<double> > spirals_y;
           vector< vector<double> > spirals_v;
           vector<int> best_spirals;
-
+          
           path_planner(x_points, y_points, v_points, yaw, velocity, goal, is_junction, tl_state, spirals_x, spirals_y, spirals_v, best_spirals);
-
+          
+          // In case all spirals are invalid then send the points received (calculated in the previous round) as a fallback in order
+          // to avoid breaking the simulation.
+          // This was important because originally the final waypoint (goal) sent by the simulator could get really far ahead,
+          // in which case it frequently happened that there were colliding obstacles in all spirals. Now this is fixed
+          // by limiting the total lookahead distance in the simulator, which caused the problem to go away.
+          if (x_points.size() == 1) {
+            x_points = x_points_received;
+            y_points = y_points_received;
+            v_points = v_points_received;
+          }
+          
+          // cout << "x_points received: " << x_points_received.size() << " sent " << x_points.size() << endl;
+          
           // Save time and compute delta time
-          time(&timer);
+          // NOTE: this was the original code, which I believe is seriously flawed.
+          // This code measures time difference in the client, as opposed to the simulation, which is what we are actually interested in.
+          // On top of that this code measures time difference in integer seconds, so new_delta_time is very coarse grained and can
+          // even be 0. I have changed this to measuring the actual simulation time difference.
+          /*time(&timer);
           new_delta_time = difftime(timer, prev_timer);
-          prev_timer = timer;
+          prev_timer = timer;*/
+          double new_delta_time;
+          if (last_sim_time < 0.0) {
+            new_delta_time = 0.0;
+          } else {
+            new_delta_time = sim_time - last_sim_time;
+          }
+          last_sim_time = sim_time;
 
           ////////////////////////////////////////
           // Steering control
           ////////////////////////////////////////
 
-          /**
-          * TODO (step 3): uncomment these lines
-          **/
-//           // Update the delta time with the previous command
+          // Update the delta time with the previous command
           pid_steer.UpdateDeltaTime(new_delta_time);
 
           // Compute steer error
+
           double error_steer;
-
-
           double steer_output;
-
-          /**
-          * TODO (step 3): compute the steer error (error_steer) from the position and the desired trajectory
-          **/
-//           error_steer = 0;
-
-          Vector2D *location_value = new Vector2D(x_position, y_position);
-          WayPointsValue way_points_value = WayPointsValue(x_points, y_points, v_points);
-          double current_steering_value = correct_angle_value(yaw);
-          int n_spirals_value = spirals_x.size();
-          Recommendation recommendation_value = way_points_value.compute_recommendation_value(location_value, current_steering_value, velocity, n_spirals_value);
-          double desired_steering_value = recommendation_value.steering;
-          double desired_speed_value = recommendation_value.speed;
-          // The explanation of this calculation is in the README.md file of the github repository, section "Mathematical explanation of the vectorial fields".
-          error_steer = correct_angle_value(desired_steering_value - current_steering_value); 
-
-          /**
-          * TODO (step 3): uncomment these lines
-          **/
-          // Compute control to apply
-          // set pid_steer
-          pid_steer.UpdateError(error_steer);
-          // set steer_output
-          steer_output = pid_steer.TotalError();
+          if (steer_op_mode == "straight") {
+            // positive is right, negative is left
+          	steer_output = 0.0;
+            error_steer = 0.0;
+          }
+          else {
+            error_steer = utils::get_steer_error(x_position, y_position, carla_yaw, 
+                                                        // x_points[0] + 10, 9
+                                                        // x_points[5], y_points[5]
+                                                        x_points[x_points.size()-1], y_points[y_points.size()-1]
+                                                       );
+            pid_steer.UpdateError(error_steer);    
+            steer_output = pid_steer.TotalError();
+          }
+          cum_abs_steer_error += std::abs(error_steer);
 
           // Save data
           file_steer.seekg(std::ios::beg);
@@ -522,43 +403,62 @@ int main ()
           // Throttle control
           ////////////////////////////////////////
 
-          /**
-          * TODO (step 2): uncomment these lines
-          **/
-//           // Update the delta time with the previous command
+          // Update the delta time with the previous command
           pid_throttle.UpdateDeltaTime(new_delta_time);
 
           // Compute error of speed
           double error_throttle;
-          /**
-          * TODO (step 2): compute the throttle error (error_throttle) from the position and the desired speed
-          **/
-          // modify the following line for step 2
-          // error_throttle = 0;
-          // set error_throttle
-          error_throttle = desired_speed_value - velocity;
+          double throttle;
+          // If the operation mode is constant speed then try to maintain it. Turns out that simply applying a constant throttle
+          // results in an almost constant speed of 3, so I cheat here. In this case set error_throttle to 0, because we are not using
+          // the throttle controller, so are only interested in the steer error.
+          if (throttle_op_mode == "constant_speed") {
+            error_throttle = 0.0;
+            throttle = 0.35;
+          }
+          // When the operation mode is constant speed reference then submit a constant speed reference of 3m/s and a waypoint
+          // 20m ahead, regardless of what output the path planner generated. This makes sense when the world is empty (no
+          // obstacles to avoid), and only on the first street.
+          else if (throttle_op_mode == "constant_speed_reference") {
+            error_throttle = utils::get_throttle_error(x_position, y_position, /*v_points[0]*/ velocity,
+                                                       x_position + 20, y_position, 3
+                                                      );
+            // Compute control to apply
+            pid_throttle.UpdateError(error_throttle);
+            throttle = pid_throttle.TotalError(true);
+          } 
+          // In all other cases submit the path planned by the planner to the controller.
+          else {
+            error_throttle = utils::get_throttle_error(x_position, y_position, /*v_points[0]*/ velocity, 
+                                                       x_points[x_points.size()-1], y_points[y_points.size()-1], v_points[v_points.size()-1]
+                                                       //x_points[2], y_points[2], v_points[2]
+                                                      );
+            // Compute control to apply
+            pid_throttle.UpdateError(error_throttle);
+            throttle = pid_throttle.TotalError();
+          }
+          cum_abs_throttle_error += std::abs(error_throttle);
 
-          double throttle_output;
           double brake_output;
-
-          /**
-          * TODO (step 2): uncomment these lines
-          **/
-//           // Compute control to apply
-          pid_throttle.UpdateError(error_throttle);
-          // declare throttle
-          double throttle = pid_throttle.TotalError();
-
-//           // Adapt the negative throttle to break
+		  double throttle_output;
+          
+          // Adapt the negative throttle to break
           if (throttle > 0.0) {
             throttle_output = throttle;
             brake_output = 0;
           } else {
             throttle_output = 0;
-            brake_output = -throttle;
+            brake_output = 0;
+            if (throttle < -0.2)
+            	brake_output = -throttle / 4.0;
           }
-
-//           // Save data
+          
+          //throttle_output = 0.3;
+          //brake_output = 0;
+          
+          // std::cout << "Controller done.." << std::endl;
+          
+          // Save data
           file_throttle.seekg(std::ios::beg);
           for(int j=0; j < i - 1; ++j){
               file_throttle.ignore(std::numeric_limits<std::streamsize>::max(),'\n');
@@ -567,7 +467,6 @@ int main ()
           file_throttle  << " " << error_throttle;
           file_throttle  << " " << brake_output;
           file_throttle  << " " << throttle_output << endl;
-
 
           // Send control
           json msgJson;
@@ -583,31 +482,55 @@ int main ()
           msgJson["spirals_v"] = spirals_v;
           msgJson["spiral_idx"] = best_spirals;
           msgJson["active_maneuver"] = behavior_planner.get_active_maneuver();
+          std::vector<double> vec {};
+          msgJson["steer_heading_vec"] = "";
+          msgJson["steer_target"] = "";
 
-          //  min point threshold before doing the update
+          // min point threshold before doing the update
           // for high update rate use 19 for slow update rate use 4
+          // NOTE: this setting was not respected due to a bug in simulatorAPI.py. I have fixed that.
           msgJson["update_point_thresh"] = 16;
-
-          auto msg = msgJson.dump();
 
           i = i + 1;
           file_steer.close();
           file_throttle.close();
+          
+          // When reaching a fixed number of steps or a hard-coded time, end the simulation, so all of the executions
+          // are roughly comparable. This is useful for doing parameter optimization, as the code is executed many
+          // times in that case
+          if (i > 300 || sim_time > 40) {
+            fstream file_cumulated;
+			file_cumulated.open("cumulated_data.txt", std::ofstream::out | std::ofstream::app);
+            
+            // NOTE: The header is added by the external Python runner script, because this program is executed several times, but we only need one header
+            // file_cumulated  << "steer_kp, steer_ki, steer_kd, throttle_kp, throttle_ki, throttle_kd, steer_mae, throttle_mae" << std::endl;
+            file_cumulated  << argv[1] << "," << argv[2] << "," << argv[3] << "," << argv[4] << "," << argv[5] << "," << argv[6] << "," ;
+            file_cumulated  << cum_abs_steer_error / total_distance << ",";
+            file_cumulated  << cum_abs_throttle_error / total_distance << std::endl;
+            file_cumulated.close();
+            
+            std::cout << "Sending closing message at time " << sim_time << ", iteration " << i << std::endl;
+            msgJson["close"] = 1;
+            
+          }
+          
+          auto msg = msgJson.dump();
 
       ws.send(msg.data(), msg.length(), uWS::OpCode::TEXT);
+      // std::cout << "Message sent to server" << std::endl;
 
     }
 
   });
 
 
-  h.onConnection([](uWS::WebSocket<uWS::SERVER> ws, uWS::HttpRequest req)
+  h.onConnection([](uWS::WebSocket<uWS::SERVER> /*ws*/, uWS::HttpRequest /*req*/)
   {
       cout << "Connected!!!" << endl;
     });
 
 
-  h.onDisconnection([&h](uWS::WebSocket<uWS::SERVER> ws, int code, char *message, size_t length)
+  h.onDisconnection([&h](uWS::WebSocket<uWS::SERVER> ws, int /*code*/, char * /*message*/, size_t /*length*/)
     {
       ws.close();
       cout << "Disconnected" << endl;
