@@ -5,9 +5,9 @@
  **********************************************/
 
 #include "pid_controller.h"
-#include <vector>
-#include <iostream>
 #include <math.h>
+#include <iostream>
+#include <vector>
 
 using namespace std;
 
@@ -15,63 +15,64 @@ PID::PID() {}
 
 PID::~PID() {}
 
-void PID::Init(double Kp, double Ki, double Kd, double output_lim_max, double output_lim_min) {
-   /**
-   * TODO: Initialize PID coefficients (and errors, if needed)
+void PID::Init(double Kpi, double Kii, double Kdi, double output_lim_maxi,
+               double output_lim_mini) {
+  /**
+   * Initialize PID coefficients (and errors, if needed)
    **/
-   // set Kd
-   this->Kd = Kd;
-   // set Kp
-   this->Kp = Kp;
-   // set Ki
-   this->Ki = Ki;
-   
-   // set output_lim_min
-   this->output_lim_min = output_lim_min;
-   // set output_lim_max
-   this->output_lim_max = output_lim_max;
-   
-   // set cte_previous
-   this->cte_previous = 0;
-   // set I_Value
-   this->I_Value = 0;
+  Kp = Kpi;
+  Ki = Kii;
+  Kd = Kdi;
+  output_lim_max = output_lim_maxi;
+  output_lim_min = output_lim_mini;
+  p_error = 0.0;
+  i_error = 0.0;
+  d_error = 0.0;
+  delta_time = 0;
 }
 
-
-void PID::UpdateError(double cte) {
-   /**
-   * TODO: Update PID errors based on cte.
+void PID::UpdateError(double cte, bool debugMode = false) {
+  /**
+   * Update PID errors based on cte.
    **/
-   if(abs(delta_time) < MIN_DELTA_TIME) return;
-   // declare P_Value
-   double P_Value = this->Kp * cte;
-   // set I_Value
-   this->I_Value += this->Ki * cte * this->delta_time;
-   // declare D_Value
-   double D_Value = this->Kd * (cte - this->cte_previous) / this->delta_time;
-   // set action_value
-   this->action_value = P_Value + this->I_Value + D_Value;
-   // set cte_previous
-   this->cte_previous = cte;
+  //sanity check to avoid division by zero
+  if(delta_time>0){
+    d_error = (cte - p_error)/delta_time;
+  }else{
+    d_error = 0.0;
+  }
+  p_error = cte;
+  i_error += cte*delta_time;
+
+  if(debugMode){
+  // debugging error signals to monitor performance of the controller
+  cout << "######## p_error #######:"<< p_error << endl;
+  cout << "######## d_error #######:"<< d_error << endl;
+  cout << "######## i_error #######:"<< i_error << endl;
+  }
 }
 
 double PID::TotalError() {
-   /**
-   * TODO: Calculate and return the total error
-    * The code should return a value in the interval [output_lim_mini, output_lim_maxi]
+  /**
+   * Calculate and return the total error
+   * The code should return a value in the interval [output_lim_mini,
+   * output_lim_maxi]
    */
-//   declare control_value
-   double control_value = this->action_value;
-   if (control_value < this->output_lim_min) control_value = this->output_lim_min;
-   if (control_value > this->output_lim_max) control_value = this->output_lim_max;
-   return control_value;
+  double control;
+//   control = -Kp * p_error - Kd * i_error - Ki * d_error;
+  control = Kp * p_error + Ki * i_error + Kd * d_error;
+  if (control < output_lim_min) {
+    control = output_lim_min;
+  }else if (control > output_lim_max){
+    control = output_lim_max;
+  }
+return control;
 }
 
 double PID::UpdateDeltaTime(double new_delta_time) {
-   /**
-   * TODO: Update the delta time with new value
+  /**
+   * Update the delta time with new value
    */
-//   set delta_time
-   this->delta_time = new_delta_time;
-   return this->delta_time;
+  delta_time = new_delta_time;
+  return delta_time;
 }

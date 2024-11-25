@@ -7,68 +7,63 @@
 #ifndef PID_CONTROLLER_H
 #define PID_CONTROLLER_H
 
-#define MIN_DELTA_TIME   0.000001
-
 class PID {
-public:
-
-   /**
-   * TODO: Create the PID class
+ public:
+  /**
+   * Create the PID class
    **/
 
-    /*
-    * Errors
-    */
-    double cte_previous;
-    /*
-    * Coefficients
-    */
-    double Kp;
-    double Ki;
-    double Kd;
-    /*
-    * Output limits
-    */
-    double output_lim_max;
-    double output_lim_min; 
-    /*
-    * Delta time
-    */
-    double delta_time;
+  /*
+   * Errors
+   */
+  double p_error;
+  double i_error;
+  double d_error;
+  /*
+   * Coefficients
+   */
+  double Kp;
+  double Ki;
+  double Kd;
+  /*
+   * Output limits
+   */
+  double output_lim_max;
+  double output_lim_min;
+  /*
+   * Delta time
+   */
+  double delta_time;
+  /*
+   * Constructor
+   */
+  PID();
 
-    double action_value;
-    double I_Value;
-    /*
-    * Constructor
-    */
-    PID();
+  /*
+   * Destructor.
+   */
+  virtual ~PID();
 
-    /*
-    * Destructor.
-    */
-    virtual ~PID();
+  /*
+   * Initialize PID.
+   */
+  void Init(double Kp, double Ki, double Kd, double output_lim_max,
+            double output_lim_min);
 
-    /*
-    * Initialize PID.
-    */
-    void Init(double Kp, double Ki, double Kd, double output_lim_max, double output_lim_min);
+  /*
+   * Update the PID error variables given cross track error.
+   */
+  void UpdateError(double cte, bool debugMode);
 
-    /*
-    * Update the PID error variables given cross track error.
-    */
-    void UpdateError(double cte);
+  /*
+   * Calculate the total PID error.
+   */
+  double TotalError();
 
-    /*
-    * Calculate the total PID error.
-    */
-    double TotalError();
-  
-    /*
-    * Update the delta time.
-    */
-    double UpdateDeltaTime(double new_delta_time);
+  /*
+   * Update the delta time.
+   */
+  double UpdateDeltaTime(double new_delta_time);
 };
 
-#endif //PID_CONTROLLER_H
-
-
+#endif  // PID_CONTROLLER_H
