@@ -77,7 +77,7 @@ template <typename T> int sgn(T val) {
     return (T(0) < val) - (val < T(0));
 }
 
-double angle_between_points(double x1, double y1, double x2, double y2){
+double angle_between_points_value(double x1, double y1, double x2, double y2){
   return atan2(y2-y1, x2-x1);
 }
 
@@ -101,7 +101,7 @@ void path_planner(vector<double>& x_points, vector<double>& y_points, vector<dou
   ego_state.velocity.x = velocity;
 
   if( x_points.size() > 1 ){
-  	ego_state.rotation.yaw = angle_between_points(x_points[x_points.size()-2], y_points[y_points.size()-2], x_points[x_points.size()-1], y_points[y_points.size()-1]);
+  	ego_state.rotation.yaw = angle_between_points_value(x_points[x_points.size()-2], y_points[y_points.size()-2], x_points[x_points.size()-1], y_points[y_points.size()-1]);
   	ego_state.velocity.x = v_points[v_points.size()-1];
   	if(velocity < 0.01)
   		ego_state.rotation.yaw = yaw;
@@ -199,8 +199,10 @@ void set_obst(vector<double> x_points, vector<double> y_points, vector<State>& o
 
 double correct_angle_value(double angle_value) {
     while(abs(angle_value) > M_PI) {
+        // angle_value < -M_PI
         if(angle_value < -M_PI) 
           angle_value += 2 * M_PI;
+        // angle_value > -M_PI
         if(angle_value > M_PI) 
           angle_value -= 2 * M_PI;
     }
@@ -211,30 +213,30 @@ double correct_angle_value(double angle_value) {
 #define FULL_STOP_VALUE     -0.5
 //#define FULL_STOP_VALUE   -1
 
-class Vector2D {
+class Vector2DValue {
 
     public:
     
     double x, y;
 
-    Vector2D(double x, double y) {
+    Vector2DValue(double x, double y) {
         this->x = x;
         this->y = y;
     }
     
-    Vector2D *sum(Vector2D *v) {
-        return new Vector2D(this->x + v->x, this->y + v->y);
+    Vector2DValue *sum(Vector2DValue *v) {
+        return new Vector2DValue(this->x + v->x, this->y + v->y);
     }
     
-    Vector2D *subtract(Vector2D *v) {
-        return new Vector2D(this->x - v->x, this->y - v->y);
+    Vector2DValue *subtract(Vector2DValue *v) {
+        return new Vector2DValue(this->x - v->x, this->y - v->y);
     }
     
-    Vector2D *multiply(double k) {
-        return new Vector2D(this->x * k, this->y * k);
+    Vector2DValue *multiply(double k) {
+        return new Vector2DValue(this->x * k, this->y * k);
     }
     
-    double dot_product(Vector2D *v) {
+    double dot_product(Vector2DValue *v) {
         return this->x * v->x + this->y * v->y;
     }
     
@@ -246,21 +248,21 @@ class Vector2D {
         return atan2(this->y, this->x);
     }
     
-    double distance(Vector2D *v) {
+    double distance(Vector2DValue *v) {
         return v->subtract(this)->magnitude();
     }
     
-    Vector2D *unitary() {
+    Vector2DValue *unitary() {
         double m = magnitude();
-        if (abs(m) < ALMOST_ZERO_VALUE) return new Vector2D(0, 0);
-        return new Vector2D(this->x / m, this->y / m);
+        if (abs(m) < ALMOST_ZERO_VALUE) return new Vector2DValue(0, 0);
+        return new Vector2DValue(this->x / m, this->y / m);
     }
 
 };
 
-Vector2D *polar_to_vector(double magnitude, double angle) {
-    return new Vector2D(magnitude * cos(angle), magnitude * sin(angle));
-    //return new Vector2D(magnitude * sin(angle), magnitude * cos(angle));
+Vector2DValue *polar_to_vector(double magnitude, double angle) {
+    return new Vector2DValue(magnitude * cos(angle), magnitude * sin(angle));
+    //return new Vector2DValue(magnitude * sin(angle), magnitude * cos(angle));
 }
 
 double min(double n1, double n2) {
@@ -274,105 +276,142 @@ struct Recommendation {
 class WayPointsValue {
 
   public: 
-  Vector2D *location, *central_point, *last_point, *i, *j, *projection;
-  int n_points, all_waypoint_stopped, any_waypoint_stopped;
+  Vector2DValue *location, *central_point_value, *last_point_value, *i, *j, *projection_value;
+  vector<Vector2DValue *> points;
+  int n_points_value, all_waypoint_stopped_value, any_waypoint_stopped_value;
   double avg_speed_value;
-  vector<Vector2D *> points;
   
-
   WayPointsValue(vector<double> x_points, vector<double> y_points, vector<double> v_points) {
-    n_points = x_points.size();
-    double x_avg = 0, y_avg = 0;
+    n_points_value = x_points.size();
+    // declare x_avg_value, y_avg_value
+    double x_avg_value = 0, y_avg_value = 0;
+    // set avg_speed_value
     avg_speed_value = 0;
-    all_waypoint_stopped = 1;
-    any_waypoint_stopped = 0;
+    // set all_waypoint_stopped_value
+    all_waypoint_stopped_value = 1;
+    // set any_waypoint_stopped_value
+    any_waypoint_stopped_value = 0;
     // computes the average point and the average speed
-    for(int i = 0; i < n_points; i++) {
-      points.push_back(new Vector2D(x_points[i], y_points[i]));
-      x_avg += x_points[i];
-      y_avg += y_points[i];
+    for(int i = 0; i < n_points_value; i++) {
+      points.push_back(new Vector2DValue(x_points[i], y_points[i]));
+      // set x_avg_value
+      x_avg_value += x_points[i];
+      // set y_avg_value
+      y_avg_value += y_points[i];
+      // set avg_speed_value
       avg_speed_value += v_points[i];
       if(abs(v_points[i]) < ALMOST_ZERO_VALUE) {
-        all_waypoint_stopped = 0;
-        any_waypoint_stopped = 1;
+        // set all_waypoint_stopped_value
+        all_waypoint_stopped_value = 0;
+        // set any_waypoint_stopped_value
+        any_waypoint_stopped_value = 1;
       }
     }
-    x_avg /= n_points;
-    y_avg /= n_points;
-    avg_speed_value /= n_points;
-    central_point = new Vector2D(x_avg, y_avg);
-    last_point = points[n_points - 1];
-    v_points = v_points;
+    // set x_avg_value
+    x_avg_value /= n_points_value;
+    // set y_avg_value
+    y_avg_value /= n_points_value;
+    // set avg_speed_value
+    avg_speed_value /= n_points_value;
+    // set central_point_value
+    central_point_value = new Vector2DValue(x_avg_value, y_avg_value);
+    // set last_point_value
+    last_point_value = points[n_points_value - 1];
+    // v_points = v_points;
   }
   
   ~WayPointsValue() {
+    // delete location
     delete(location);
-    delete(central_point);
-    delete(last_point);
+    // delete central_point_value
+    delete(central_point_value);
+    // delete last_point_value
+    delete(last_point_value);
   }
   
   double compute_steering_compensation() {
-    double max_angle = M_PI * 0.25;
-    double angle_compensation = -projection->y * 0.5; //0.25; //0.75; // * 0.5;
-    if(angle_compensation > max_angle) angle_compensation = max_angle;
-    if(angle_compensation < -max_angle) angle_compensation = -max_angle;
-    return angle_compensation;
+
+    double max_angle_value = M_PI * 0.25;
+    double angle_compensation_value = -projection_value->y * 0.5; //0.25; //0.75; // * 0.5;
+    if(angle_compensation_value > max_angle_value) angle_compensation_value = max_angle_value;
+    if(angle_compensation_value < -max_angle_value) angle_compensation_value = -max_angle_value;
+    return angle_compensation_value;
   }
   
-  double compute_speed_compensation() {
+  double compute_speed_compensation_value() {
+    // declare max_speed
     double max_speed = 1.5; //1;
-    double offset = 0; //0.5; //-0.5; //-1;
-    double speed_compensation = -(projection->x - offset) * 0.15; //0.2; //0.1;
+    // declare offset
+    double offset_value = 0; //0.5; //-0.5; //-1;
+    // declare speed_compensation
+    double speed_compensation = -(projection_value->x - offset_value) * 0.15; //0.2; //0.1;
+    // check speed_compensation
     if(speed_compensation > max_speed) speed_compensation = max_speed;
+    // check speed_compensation
     if(speed_compensation < -max_speed) speed_compensation = -max_speed;
     //if(speed_compensation < 0) speed_compensation *= 2;
     return speed_compensation;
   }
   
-  double regulate_initial_speed(double goal_speed, double current_speed) {
-    //return goal_speed;
-    double diff_speed = goal_speed - current_speed;
-    double max_diff = 0.75; //0.75; //0.5; //1; //2;
-    if(diff_speed > max_diff) goal_speed = current_speed + max_diff;
-    if(diff_speed < -max_diff) goal_speed = current_speed - max_diff;
-    return goal_speed;
+  double get_regulate_initial_speed(double goal_speed_value, double current_speed_value) {
+    //return goal_speed_value;
+    // declare diff_speed_value
+    double diff_speed_value = goal_speed_value - current_speed_value;
+    // declare max_diff_value
+    double max_diff_value = 0.75; //0.75; //0.5; //1; //2;
+    // check diff_speed_value
+    if(diff_speed_value > max_diff_value) goal_speed_value = current_speed_value + max_diff_value;
+    // check diff_speed_value
+    if(diff_speed_value < -max_diff_value) goal_speed_value = current_speed_value - max_diff_value;
+    return goal_speed_value;
   }
   
-  Recommendation recommended_to_stop(double current_angle, double current_speed) {
+  Recommendation recommended_to_stop_value(double current_angle_value, double current_speed_value) {
     return Recommendation {
-      correct_angle_value(current_angle), 
+      correct_angle_value(current_angle_value), 
       FULL_STOP_VALUE
-      //regulate_initial_speed(FULL_STOP_VALUE, current_speed)
+      //get_regulate_initial_speed(FULL_STOP_VALUE, current_speed_value)
     };
   }
   
   // The explanation of this calculation is in the README.md file of the github repository, section "Mathematical explanation of the vectorial fields".
-  Recommendation compute_recommendation_value(Vector2D *location, double current_angle, double current_speed, int n_spirals) {
+  Recommendation compute_recommendation_value(Vector2DValue *location, double current_angle_value, double current_speed_value, int n_spirals_value) {
     this->location = location;
     // if the average speed is zero or there are no spirals, the car should stop.
-    if(abs(avg_speed_value) < ALMOST_ZERO_VALUE|| n_spirals == 0) {
-      return recommended_to_stop(current_angle, current_speed);
+    if(abs(avg_speed_value) < ALMOST_ZERO_VALUE|| n_spirals_value == 0) {
+      return recommended_to_stop_value(current_angle_value, current_speed_value);
     } else {
       // computes the ortonormal base
-      Vector2D *direction = last_point->subtract(central_point);
-      i = direction->unitary();
-      j = new Vector2D(-i->y, i->x);
-      // computes the projection of the car location onto the ortonormal base
-      Vector2D *d = location->subtract(central_point);
-      projection = new Vector2D(d->dot_product(i), d->dot_product(j));
-      double steering = correct_angle_value(direction->angle());
-      double steering_compensation = correct_angle_value(compute_steering_compensation());
+      // declare direction_value
+      Vector2DValue *direction_value = last_point_value>subtract(central_point_value);
+      // set i
+      i = direction_value->unitary();
+      // set j
+      j = new Vector2DValue(-i->y, i->x);
+      // computes the projection_value of the car location onto the ortonormal base
+      // declare d
+      Vector2DValue *d = location->subtract(central_point_value);
+      // set projection_value
+      projection_value = new Vector2DValue(d->dot_product(i), d->dot_product(j));
+      // declare steering
+      double steering = correct_angle_value(direction_value->angle());
+      // declare steering_compensation_value
+      double steering_compensation_value = correct_angle_value(compute_steering_compensation());
+      // declare speed
       double speed = min(avg_speed_value, 3);
-      double speed_compensation = compute_speed_compensation();
-      printf("Recommendation: steering=%f+%f, speed=%f+%f\n", steering, steering_compensation, speed, speed_compensation);
-      printf("Current: steering=%f, speed=%f\n", current_angle, current_speed);
-      printf("direction=(%f,%f), projection=(%f,%f)\n\n", direction->x, direction->y, projection->x, projection->y);
+      // declare speed_compensation
+      double speed_compensation = compute_speed_compensation_value();
+      printf("Recommendation_value: steering=%f+%f, speed=%f+%f\n", steering, steering_compensation_value, speed, speed_compensation);
+      printf("Current_value: steering=%f, speed=%f\n", current_angle_value, current_speed_value);
+      printf("direction_value=(%f,%f), projection_value=(%f,%f)\n\n", direction_value->x, direction_value->y, projection_value->x, projection_value->y);
       // if the car is ahead of the first (last) waypoint, the car should stop.
-      if(projection->x > direction->magnitude()) 
-        return recommended_to_stop(current_angle, current_speed);
+      if(projection_value->x > direction_value->magnitude()) 
+        return recommended_to_stop_value(current_angle_value, current_speed_value);
       return Recommendation {
-        correct_angle_value(steering + steering_compensation), 
-        regulate_initial_speed(speed + speed_compensation, current_speed)
+        // correct_angle_value
+        correct_angle_value(steering + steering_compensation_value), 
+        // get_regulate_initial_speed
+        get_regulate_initial_speed(speed + speed_compensation, current_speed_value)
       };
     }
   }
@@ -489,13 +528,19 @@ int main ()
           * TODO (step 3): compute the steer error (error_steer) from the position and the desired trajectory
           **/
 //           error_steer = 0;
-
-          Vector2D *location_value = new Vector2D(x_position, y_position);
+          //declare location_value
+          Vector2DValue *location_value = new Vector2DValue(x_position, y_position);
+          //declare way_points_value
           WayPointsValue way_points_value = WayPointsValue(x_points, y_points, v_points);
+          //declare current_steering_value
           double current_steering_value = correct_angle_value(yaw);
+          //declare n_spirals_value
           int n_spirals_value = spirals_x.size();
+          //declare recommendation_value
           Recommendation recommendation_value = way_points_value.compute_recommendation_value(location_value, current_steering_value, velocity, n_spirals_value);
+          //declare desired_steering_value
           double desired_steering_value = recommendation_value.steering;
+          //declare desired_speed_value
           double desired_speed_value = recommendation_value.speed;
           // The explanation of this calculation is in the README.md file of the github repository, section "Mathematical explanation of the vectorial fields".
           error_steer = correct_angle_value(desired_steering_value - current_steering_value); 
