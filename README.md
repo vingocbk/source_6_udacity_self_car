@@ -223,3 +223,69 @@ kill id
 ## Step 8. Check the Rubric and Submit
 
 Re-check the rubric in the classroom and ensure that your submission satisfies all rubric criteria to pass the project. Once you are confident, submit the project. 
+
+### Code quality
+
+- Use of command lines on a Linux terminal.
+  
+The project runs commands on the terminal and to compile and test code through command lines on a Linux terminal.
+
+- The documentation is well utilized.
+
+The README file includes a summary of the project, how to run the scripts, and an explanation of the files in the repository. Comments are used effectively.
+
+### Build the PID controller object
+
+- The code runs without errors and generates two PID objects.
+
+The scripts “main.cpp”, “pid_controller.cpp” and “pid_controller.h” compile without errors and when “run_main_pid.sh” runs without error.
+
+- Code a discretized integrator and derivator.
+	
+The function “UpdateError” should compute the derivative and integration part of the PID. The function updates the errors for the proportionate, integral and derivative terms.
+
+- Understand C++ class structure
+
+All variable and methods are completed in the file  “pid_controller.h” and “pid_controller.cpp”
+
+The PID object instances (pid_steer and pid_throttle) are initialized in the “main.cpp” code.
+
+### Adapt the PID controller to the simulation
+
+- Understand the car dynamics and how to compute an error with a trajectory.
+
+The script uses the variables described in the README and computes the error between the position and the trajectory for the speed and the yaw. The code is clearly commented.
+
+- Tune and test the PID on the simulation
+
+error_steer are updated in the "main.cpp"
+
+### Evaluate and analyze the PID controller
+
+- Plot the results of the simulation.
+
+steering plot:
+
+throttle plot:
+
+- Analyzing a plot.
+
+A few lines explaining the plots and describing what is plotted: the variables, the phenomenon shown.
+
+- Recognize the action of each part of the PID controller.
+
+A few lines answer the second question: What is the effect of the PID according to the plots, how each part of the PID affects the control command? The answer explains the role of the different parts of the PID.
+
+- How would you design a way to automatically tune the PID parameters? This is an open question, the coherence and justification of the answer is valued.
+
+
+
+- PID controller is a model free controller, i.e. it does not use a model of the car. Could you explain the pros and cons of this type of controller? Find at least 2 pros and cons for model free versus model based.
+
+
+
+- (Optional) What would you do to improve the PID controller? This is an open question, the coherence and justification of the answer is valued.
+
+Modify the proportional, integral, and derivative terms dynamically based on error magnitude to prevent saturation or excessive corrections.
+
+Can use observers like Kalman filters or some other filters to estimate unmeasured states or reduce noise in the feedback signal. This enhances the controller's robustness and accuracy in noisy environments.

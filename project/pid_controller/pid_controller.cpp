@@ -43,10 +43,15 @@ void PID::UpdateError(double cte) {
    * TODO: Update PID errors based on cte.
    **/
    if(abs(delta_time) < MIN_DELTA_TIME) return;
+   // declare P_Value
    double P_Value = this->Kp * cte;
+   // set I_Value
    this->I_Value += this->Ki * cte * this->delta_time;
+   // declare D_Value
    double D_Value = this->Kd * (cte - this->cte_previous) / this->delta_time;
+   // set action_value
    this->action_value = P_Value + this->I_Value + D_Value;
+   // set cte_previous
    this->cte_previous = cte;
 }
 
@@ -55,6 +60,7 @@ double PID::TotalError() {
    * TODO: Calculate and return the total error
     * The code should return a value in the interval [output_lim_mini, output_lim_maxi]
    */
+//   declare control_value
    double control_value = this->action_value;
    if (control_value < this->output_lim_min) control_value = this->output_lim_min;
    if (control_value > this->output_lim_max) control_value = this->output_lim_max;
@@ -65,6 +71,7 @@ double PID::UpdateDeltaTime(double new_delta_time) {
    /**
    * TODO: Update the delta time with new value
    */
+//   set delta_time
    this->delta_time = new_delta_time;
    return this->delta_time;
 }
