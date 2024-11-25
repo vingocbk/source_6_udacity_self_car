@@ -252,7 +252,7 @@ class Vector2D {
     
     Vector2D *unitary() {
         double m = magnitude();
-        if (abs(m) < ALMOST_ZER_VALUEO) return new Vector2D(0, 0);
+        if (abs(m) < ALMOST_ZERO_VALUE) return new Vector2D(0, 0);
         return new Vector2D(this->x / m, this->y / m);
     }
 
@@ -292,7 +292,7 @@ class WayPointsValue {
       x_avg += x_points[i];
       y_avg += y_points[i];
       avg_speed_value += v_points[i];
-      if(abs(v_points[i]) < ALMOST_ZER_VALUEO) {
+      if(abs(v_points[i]) < ALMOST_ZERO_VALUE) {
         all_waypoint_stopped = 0;
         any_waypoint_stopped = 1;
       }
