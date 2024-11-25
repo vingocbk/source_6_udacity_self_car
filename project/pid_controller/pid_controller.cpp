@@ -50,7 +50,7 @@ void PID::UpdateError(double cte) {
    this->cte_previous = cte;
 }
 
-double PID::TotalError() {
+double PID::TotalError(bool debug) {
    /**
    * TODO: Calculate and return the total error
     * The code should return a value in the interval [output_lim_mini, output_lim_maxi]
