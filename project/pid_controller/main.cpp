@@ -350,7 +350,7 @@ class WayPointsValue {
   Recommendation compute_recommendation_value(Vector2D *location, double current_angle, double current_speed, int n_spirals) {
     this->location = location;
     // if the average speed is zero or there are no spirals, the car should stop.
-    if(abs(avg_speed_value) < ALMOST_ZERO _VALUE|| n_spirals == 0) {
+    if(abs(avg_speed_value) < ALMOST_ZERO_VALUE|| n_spirals == 0) {
       return recommended_to_stop(current_angle, current_speed);
     } else {
       // computes the ortonormal base
