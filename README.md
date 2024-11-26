@@ -218,6 +218,15 @@ ps -aux | grep carla
 kill id     
 ```
 
+Draw the graph
+
+```bash
+# Install lib
+pip3 install pandas 
+# Run the following commands from the nd013-c6-control-starter/project directory
+python3 plot_pid.py
+```
+
 <br/><br/>
 
 ## Step 8. Check the Rubric and Submit
@@ -264,25 +273,55 @@ error_steer are updated in the "main.cpp"
 
 - Plot the results of the simulation.
 
-steering plot:
+**Steering plot:**
 
-throttle plot:
+![plot](image/steering.png)
 
-- Analyzing a plot.
+The PID controller have Kp = 0.23, Ki = 0.0001, Kd = 0.24, max = 1.0, min = -1.0.
 
-A few lines explaining the plots and describing what is plotted: the variables, the phenomenon shown.
+This figure is the plot of the steering command data. The PID controller design choice to clip the minimum / maximum steering allowed from ± 1.0 rad.
 
-- Recognize the action of each part of the PID controller.
+Due to limited time, the PID controller's numerical calibration is still not accurate, so at some points the steering error is still large.
 
-A few lines answer the second question: What is the effect of the PID according to the plots, how each part of the PID affects the control command? The answer explains the role of the different parts of the PID.
+**Throttle plot:**
+
+![plot](image/throttle.png)
+
+The PID controller have Kp = 0.55, Ki = 0.11, Kd = 0.65, max = 1.0, min = -1.0.
+
+The system has a coefficient Kd larger than kp, when the vehicle exceeds the desired position, the coefficient kd will pull the vehicle back to the desired position, because the coefficient kd is large, sometimes there will be a phenomenon of sudden braking at some positions on the graph.
+
+### Answer the questions:
+
+- What is the effect of the PID according to the plots, how each part of the PID affects the control command? The answer explains the role of the different parts of the PID.
+
+**Proportional (P):** Provides quick response to error but may not eliminate steady-state error.
+
+**Integral (I):** Eliminates steady-state error over time but can lead to overshoot and slower response.
+
+**Derivative (D):** Improves stability and damping, reducing overshoot and providing smoother control.
 
 - How would you design a way to automatically tune the PID parameters? This is an open question, the coherence and justification of the answer is valued.
 
+**Adaptive Tuning** :Monitor system behavior in real time and adjust parameters dynamically based on feedback. Techniques include:
 
+Recursive Least Squares (RLS) to estimate system parameters and adapt the PID gains.
+
+Gain Scheduling to vary PID parameters based on operating conditions (e.g., speed or load).
 
 - PID controller is a model free controller, i.e. it does not use a model of the car. Could you explain the pros and cons of this type of controller? Find at least 2 pros and cons for model free versus model based.
 
+**Pros:**
 
+**Simplicity:** Model-free controllers like PID are easy to implement and demand little understanding of the system's internal dynamics, making them flexible and suitable for various applications.
+
+**Handle Complex Systems:** These controllers are highly effective in controlling multi-variable, non-linear, and time-varying systems, where variable interactions demand advanced control methods. In the past, I also used this controller to operate a Segway.
+
+**Cons:**
+
+**Complexity and Cost:** Creating an accurate model demands considerable effort, specialized knowledge, and computational resources, making these controllers more challenging to access and costly to implement.
+
+**Sensitivity to Model Accuracy:** The performance of the controller relies greatly on the precision of the system model, with any errors or unaccounted dynamics potentially causing instability or reduced effectiveness.
 
 - (Optional) What would you do to improve the PID controller? This is an open question, the coherence and justification of the answer is valued.
 
